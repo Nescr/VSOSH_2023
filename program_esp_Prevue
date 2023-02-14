@@ -1,0 +1,156 @@
+#define SERIAL_SPEED 115200
+
+
+/////////////////////////////////
+#define WAITING_ST 0
+#define RUNNING_ST 1
+#define SCANNING_ST 2
+#define SCAN_SUCCESS_ST 3
+#define SCAN_ERROR_ST 4
+
+int state = WAITING_ST;
+
+bool delayedStop = false;
+////////////////////////////////
+
+
+void conveyor_stop(){
+	//digitalWrite(MOT_A_PIN, 0);
+	//digitalWrite(MOT_B_PIN, 0);
+}
+
+void conveyor_run(){
+	//digitalWrite(MOT_A_PIN, 1);
+	//digitalWrite(MOT_B_PIN, 0);
+}
+
+
+
+void setup(){
+	Serial.begin(SERIAL_SPEED);
+}
+
+
+void waitingSt_handler(int cmd){
+	switch(cmd){
+		case NO_COM:{
+			break;
+		}
+		case START_COM:{
+			state = RUNNING_ST;
+			break;
+		}
+		default:{
+			//WRONG COMMAND
+		}
+	}
+}
+
+
+#define OBJ_FIND_DISTANCE_CM 7
+
+bool check_object(){
+	bool obj = false;
+	float dist = get_distance();
+	if (dist <= OBJ_FIND_DISTANCE_CM)
+		obj = true;
+	return obj;
+}
+
+
+void runningSt_handler(int cmd){
+	if (delayedStop){
+		conveyor_stop();
+		state = WAITING_ST;
+	}
+		
+	
+	if (check_object()){
+		conveyor_stop();
+		state = SCANNING_ST;
+		return;
+	}
+	
+	conveyor_run();
+	
+	switch(cmd){
+		case NO_COM:{
+			break;
+		}
+		case STOP_COM:{
+			conveyor_stop();
+			state = WAITING_ST;
+			break;
+		}
+		default:{
+			//WRONG COMMAND
+		}
+	}
+}
+
+void scanningSt_handler(int cmd){
+
+}
+
+void scanSuccessSt_handler(int cmd){
+
+}
+
+void scanErrorSt_handler(int cmd){
+
+}
+
+
+#define LEFT 0
+#define RIGHT 1
+bool container = LEFT;
+
+#define NO_COM '0'
+#define START_COM '1'
+#define STOP_COM '2'
+#define SCANNING_ERROR_COM '3'
+#define MOVE_R 	'4'
+#define MOVE_L	'5'
+
+int check_data(){
+	return Serial.available();
+}
+
+int get_command(){
+	if (check_data > 0){
+		int cmd = Serial.read();
+	}
+	if (cmd < NO_COM) or  (cmd > MOVE_L)
+		cmd = NO_COM;
+	return cmd;
+}
+
+void loop(){
+	int cmd = get_command();
+	if (cmd == STOP_COM){
+		delayedStop = true;
+	}
+
+	switch(state){
+		case WAITING_ST:{
+			waitingSt_handler(cmd);
+			break;
+		}
+		case RUNNING_ST:{
+			runningSt_handler(cmd);
+			break;
+		}
+		case SCANNING_ST:{
+			scanningSt_handler(cmd);
+			break;
+		}
+		case SCAN_SUCCESS_ST:{
+			scanSuccessSt_handler(cmd);
+			break;
+		}
+		case SCAN_ERROR_ST:{
+			scanErrorSt_handler(cmd);
+			break;
+		}
+	}
+}
